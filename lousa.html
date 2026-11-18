@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lousa">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1f3a5f">
+<title>Lousa de Estudos</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #e9e7e1; color: #1d1d1b; font-family: -apple-system, Helvetica, Arial, sans-serif; -webkit-text-size-adjust: 100%; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: rgba(0,0,0,0); }
+  .escondido { display: none !important; }
+  button, .botao { display: inline-block; font-size: 15px; line-height: 20px; padding: 9px 12px; margin: 3px; border: 1px solid #b9b6ad; border-radius: 8px; background: #fff; color: #1d1d1b; position: relative; overflow: hidden; vertical-align: middle; font-family: inherit; }
+  button:active, .botao:active { background: #ddd; }
+  button.ativo { background: #1f3a5f; color: #fff; border-color: #1f3a5f; }
+  button.primario { background: #1f3a5f; color: #fff; border-color: #1f3a5f; font-weight: bold; }
+  .botao input { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; font-size: 100px; }
+  .cor { width: 40px; height: 40px; padding: 0; border-radius: 20px; border: 3px solid #fff; box-shadow: 0 0 0 1px #b9b6ad; }
+  .cor.ativo { box-shadow: 0 0 0 3px #1f3a5f; }
+
+  /* tela inicial */
+  #inicio { max-width: 460px; margin: 0 auto; padding: 32px 16px; }
+  #inicio h1 { font-size: 30px; margin: 0 0 4px; color: #1f3a5f; }
+  #inicio p { color: #5b5a55; margin: 0 0 24px; }
+  .cartao { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid #d8d5cc; }
+  .cartao label { display: block; font-size: 14px; color: #5b5a55; margin-bottom: 6px; }
+  .cartao input[type=text] { width: 100%; font-size: 18px; padding: 10px; border: 1px solid #b9b6ad; border-radius: 8px; margin-bottom: 10px; -webkit-appearance: none; }
+  .cartao button { width: 100%; margin: 0; font-size: 17px; padding: 12px; }
+  #codigoEntrada { text-transform: uppercase; letter-spacing: 3px; }
+
+  /* sala */
+  #barra { position: fixed; left: 0; right: 0; top: 0; z-index: 10; background: #f8f7f3; border-bottom: 1px solid #c9c6bd; padding: 4px 6px; }
+  .grupo { display: inline-block; margin-right: 8px; vertical-align: middle; }
+  #infoSala { font-size: 14px; color: #5b5a55; padding: 0 6px; }
+  #infoSala b { color: #1d1d1b; letter-spacing: 1px; }
+  #paginaTxt { display: inline-block; min-width: 54px; text-align: center; font-size: 15px; vertical-align: middle; }
+  #area { padding: 10px; }
+  #lousa { display: block; margin: 0 auto; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+  #aviso { position: fixed; left: 50%; bottom: 20px; width: 300px; margin-left: -150px; z-index: 20; background: #1d1d1b; color: #fff; padding: 12px 14px; border-radius: 10px; font-size: 15px; text-align: center; }
+  #pessoas { position: fixed; right: 8px; z-index: 15; background: #fff; border: 1px solid #c9c6bd; border-radius: 10px; padding: 8px 12px; font-size: 15px; min-width: 180px; }
+  #pessoas div { padding: 3px 0; }
+  #salvos { padding: 16px; }
+  @media (max-width: 640px) {
+    #barra { padding: 2px; }
+    #barra button, #barra .botao { font-size: 13px; line-height: 16px; padding: 6px 7px; margin: 2px 1px; }
+    #barra .cor { width: 28px; height: 28px; padding: 0; border-width: 2px; }
+    .grupo { margin-right: 3px; }
+    #infoSala { font-size: 12px; padding: 0 2px; }
+    #paginaTxt { min-width: 36px; font-size: 13px; }
+    #area { padding: 4px; }
+  }
+  #salvos img { display: block; max-width: 100%; margin: 0 auto 16px; border: 1px solid #999; background: #fff; }
+</style>
+</head>
+<body>
+
+<div id="inicio">
+  <h1>Lousa de Estudos</h1>
+  <p>Uma lousa compartilhada em tempo real para estudar em grupo.</p>
+  <div class="cartao">
+    <label for="nome">Seu nome</label>
+    <input type="text" id="nome" maxlength="20" autocomplete="off" placeholder="Ex.: Ana">
+  </div>
+  <div class="cartao">
+    <button id="bCriar" class="primario">Criar sala nova</button>
+  </div>
+  <div class="cartao">
+    <label for="codigoEntrada">Entrar com código</label>
+    <input type="text" id="codigoEntrada" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="Ex.: K7M2QX">
+    <button id="bEntrar">Entrar</button>
+  </div>
+</div>
+
+<div id="sala" class="escondido">
+  <div id="barra">
+    <span class="grupo" id="infoSala">Sala <b id="codigoTxt">------</b></span>
+    <span class="grupo"><button id="bConvidar">Convidar</button><button id="bPessoas">👥 <span id="nPessoas">1</span></button></span>
+    <span class="grupo">
+      <button class="cor ativo" data-cor="#111111" style="background:#111111"></button>
+      <button class="cor" data-cor="#1a5fd0" style="background:#1a5fd0"></button>
+      <button class="cor" data-cor="#d0261a" style="background:#d0261a"></button>
+      <button class="cor" data-cor="#1d8a3a" style="background:#1d8a3a"></button>
+      <button class="cor" data-cor="#f2c200" style="background:#f2c200" title="Marca-texto"></button>
+    </span>
+    <span class="grupo">
+      <button id="tCaneta" class="ativo">✏️ Caneta</button><button id="tGrossa">Grossa</button><button id="tBorracha">Borracha</button><button id="tMao">✋ Rolar</button><button id="bDesfazer">↶ Desfazer</button>
+    </span>
+    <span class="grupo">
+      <button id="bAnt">◀</button><span id="paginaTxt">1/1</span><button id="bProx">▶</button><button id="bNovaPag">+ Página</button>
+    </span>
+    <span class="grupo">
+      <span class="botao" id="importarBotao"><span id="importarTxt">📄 PDF/Foto</span><input id="arquivo" type="file"></span><button id="bSalvar">💾 Salvar</button><button id="bSair">Sair</button>
+    </span>
+  </div>
+  <div id="area"><canvas id="lousa"></canvas></div>
+  <div id="pessoas" class="escondido"></div>
+</div>
+
+<div id="salvos" class="escondido"></div>
+<div id="aviso" class="escondido"></div>
+
+<script>
+/*
+ * Lousa de Estudos — ES5 puro para rodar até no Safari 9 (iPad 3, iOS 9.3.5).
+ * Firebase Realtime Database via REST + EventSource (sem SDK).
+ */
+(function () {
+  'use strict';
+
+  var CONFIG = {
+    apiKey: 'AIzaSyAw-Wt1ITwJIlV6DHgs1FbZdZmabuyfsqA',
+    databaseURL: 'https://lousa-4f648-default-rtdb.firebaseio.com'
+  };
+  var MAX_PAGINAS_PDF = 40;
+  var LARGURA_FUNDO = 1400;
+
+  /* ---------- utilidades ---------- */
+  function $(id) { return document.getElementById(id); }
+  function guardar(chave, valor) { try { localStorage.setItem(chave, valor); } catch (e) {} }
+  function ler(chave) { try { return localStorage.getItem(chave); } catch (e) { return null; } }
+  function texto(el, t) { el.innerHTML = ''; el.appendChild(document.createTextNode(t)); }
+  var timerAviso = null;
+  function avisar(msg, duracao) {
+    var el = $('aviso');
+    texto(el, msg);
+    el.className = '';
+    clearTimeout(timerAviso);
+    if (duracao !== 0) { timerAviso = setTimeout(function () { el.className = 'escondido'; }, duracao || 2500); }
+  }
+  function esconderAviso() { $('aviso').className = 'escondido'; }
+  function cada(obj, fn) { for (var k in obj) { if (obj.hasOwnProperty(k)) { fn(k, obj[k]); } } }
+  function navegadorModerno() { try { new Function('var f = (x) => x;'); return true; } catch (e) { return false; } }
+  var MODERNO = navegadorModerno();
+
+  /* ---------- HTTP / autenticação ---------- */
+  var token = null, uid = null, refreshToken = ler('lousa.refresh');
+
+  function requisicao(metodo, url, corpo, cb, formulario) {
+    var xhr = new XMLHttpRequest(), feito = false;
+    function fim(err, dados) { if (feito) { return; } feito = true; if (cb) { cb(err, dados); } }
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) { return; }
+      var dados = null;
+      try { dados = xhr.responseText ? JSON.parse(xhr.responseText) : null; } catch (e) {}
+      if (xhr.status >= 200 && xhr.status < 300) { fim(null, dados); }
+      else { fim('HTTP ' + xhr.status, dados); }
+    };
+    setTimeout(function () { try { xhr.abort(); } catch (e) {} fim('tempo esgotado'); }, 30000);
+    xhr.open(metodo, url, true);
+    if (formulario) {
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhr.send(formulario);
+    } else {
+      if (corpo !== undefined) { xhr.setRequestHeader('Content-Type', 'application/json'); }
+      xhr.send(corpo === undefined ? null : JSON.stringify(corpo));
+    }
+  }
+
+  function entrarFirebase(cb) {
+    if (refreshToken) {
+      requisicao('POST', 'https://securetoken.googleapis.com/v1/token?key=' + CONFIG.apiKey, undefined, function (err, d) {
+        if (!err && d && d.id_token) {
+          token = d.id_token; uid = d.user_id; refreshToken = d.refresh_token; guardar('lousa.refresh', refreshToken);
+          agendarRenovacao(); cb(null); return;
+        }
+        refreshToken = null; entrarFirebase(cb);
+      }, 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(refreshToken));
+      return;
+    }
+    requisicao('POST', 'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + CONFIG.apiKey, { returnSecureToken: true }, function (err, d) {
+      if (err || !d || !d.idToken) { cb(err || 'sem token'); return; }
+      token = d.idToken; uid = d.localId; refreshToken = d.refreshToken; guardar('lousa.refresh', refreshToken);
+      agendarRenovacao(); cb(null);
+    });
+  }
+  var timerRenovar = null;
+  function agendarRenovacao() {
+    clearTimeout(timerRenovar);
+    timerRenovar = setTimeout(function () {
+      entrarFirebase(function (err) { if (!err && codigoSala) { conectarStream(); } });
+    }, 50 * 60 * 1000);
+  }
+  function urlBanco(caminho) { return CONFIG.databaseURL + '/' + caminho + '.json?auth=' + encodeURIComponent(token); }
+  function idNovo() {
+    var letras = '0123456789abcdefghijklmnopqrstuvwxyz', s = (new Date().getTime()).toString(36);
+    for (var i = 0; i < 8; i++) { s += letras.charAt(Math.floor(Math.random() * letras.length)); }
+    return s;
+  }
+
+  /* ---------- estado da sala ---------- */
+  var codigoSala = null, nome = '';
+  var sala = { paginas: {}, pessoas: {}, atual: null };
+  var meusTracos = [];
+  var fonte = null;
+  var desvioRelogio = 0;
+
+  function caminhoSala(sub) { return 'salas/' + codigoSala + (sub ? '/' + sub : ''); }
+
+  function paginasOrdenadas() {
+    var lista = [];
+    cada(sala.paginas, function (id, p) { if (p) { lista.push({ id: id, o: p.o || 0 }); } });
+    lista.sort(function (a, b) { return a.o - b.o || (a.id < b.id ? -1 : 1); });
+    return lista;
+  }
+  function paginaAtualId() {
+    var lista = paginasOrdenadas();
+    if (sala.atual && sala.paginas[sala.atual]) { return sala.atual; }
+    return lista.length ? lista[0].id : null;
+  }
+  function paginaAtual() { var id = paginaAtualId(); return id ? sala.paginas[id] : null; }
+
+  /* aplica um evento put/patch do Firebase na cópia local */
+  function definir(partes, valor) {
+    if (partes.length === 0) {
+      sala = { paginas: (valor && valor.paginas) || {}, pessoas: (valor && valor.pessoas) || {}, atual: (valor && valor.atual) || null };
+      return;
+    }
+    var alvo = sala, i;
+    for (i = 0; i < partes.length - 1; i++) {
+      if (alvo[partes[i]] === undefined || alvo[partes[i]] === null || typeof alvo[partes[i]] !== 'object') { alvo[partes[i]] = {}; }
+      alvo = alvo[partes[i]];
+    }
+    var ultima = partes[partes.length - 1];
+    if (valor === null) { delete alvo[ultima]; } else { alvo[ultima] = valor; }
+    if (!sala.paginas) { sala.paginas = {}; }
+    if (!sala.pessoas) { sala.pessoas = {}; }
+  }
+  function aplicarEvento(caminho, dados, mesclar) {
+    var partes = [], brutas = caminho.split('/');
+    for (var i = 0; i < brutas.length; i++) { if (brutas[i]) { partes.push(brutas[i]); } }
+    if (mesclar) { cada(dados, function (k, v) { definir(partes.concat(k.split('/')), v); }); }
+    else { definir(partes, dados); }
+    var mudouFundo = partes.length === 0 || partes[0] === 'atual' || (partes[0] === 'paginas' && (partes.length <= 2 || partes[2] === 'fundo'));
+    if (mudouFundo) { prepararFundo(); }
+    agendarDesenho();
+    atualizarInterface();
+  }
+
+  function conectarStream() {
+    if (fonte) { try { fonte.close(); } catch (e) {} }
+    var minha = new EventSource(urlBanco(caminhoSala()));
+    fonte = minha;
+    function tratar(e, mesclar) {
+      if (fonte !== minha) { return; }
+      var d; try { d = JSON.parse(e.data); } catch (x) { return; }
+      if (d) { aplicarEvento(d.path, d.data, mesclar); }
+      if (!carregou) { carregou = true; aoCarregarSala(); }
+    }
+    minha.addEventListener('put', function (e) { tratar(e, false); }, false);
+    minha.addEventListener('patch', function (e) { tratar(e, true); }, false);
+    minha.addEventListener('auth_revoked', function () {
+      minha.close();
+      entrarFirebase(function (err) { if (!err) { conectarStream(); } });
+    }, false);
+    minha.addEventListener('cancel', function () { minha.close(); avisar('Acesso à sala negado.', 4000); }, false);
+  }
+
+  /* ---------- presença ---------- */
+  var timerPresenca = null;
+  function marcarPresenca() {
+    if (!codigoSala || !token) { return; }
+    var antes = new Date().getTime();
+    requisicao('PUT', urlBanco(caminhoSala('pessoas/' + uid)), { n: nome, v: { '.sv': 'timestamp' } }, function (err, d) {
+      if (!err && d && typeof d.v === 'number') {
+        var agora = new Date().getTime();
+        desvioRelogio = d.v - (antes + agora) / 2;
+      }
+    });
+  }
+  function pessoasOnline() {
+    var lista = [], agora = new Date().getTime() + desvioRelogio;
+    cada(sala.pessoas, function (id, p) { if (p && typeof p.v === 'number' && agora - p.v < 60000) { lista.push({ id: id, n: p.n || 'Sem nome' }); } });
+    if (!lista.length) { lista.push({ id: uid, n: nome }); }
+    return lista;
+  }
+
+  /* ---------- lousa: desenho ---------- */
+  var canvas = $('lousa'), ctx = canvas.getContext('2d');
+  var larg = 800, alt = 600, escala = 1;
+  var cor = '#111111', grossa = false, ferramenta = 'caneta';
+  var tracoAtual = null;
+  var imagemFundo = null, fundoDaPagina = null, proporcao = 0.75;
+  var pedidoDesenho = false;
+
+  function largura(t) { return (t.w || 0.003) * larg; }
+  function desenharTraco(c, t, L) {
+    var p = t.p;
+    if (!p || p.length < 2) { return; }
+    c.save();
+    if (t.c === '#f2c200') { c.globalAlpha = 0.4; }
+    c.strokeStyle = t.c || '#111'; c.lineWidth = (t.w || 0.003) * L; c.lineCap = 'round'; c.lineJoin = 'round';
+    c.beginPath(); c.moveTo(p[0] * L, p[1] * L);
+    if (p.length === 2) { c.lineTo(p[0] * L + 0.1, p[1] * L); }
+    for (var i = 2; i < p.length; i += 2) { c.lineTo(p[i] * L, p[i + 1] * L); }
+    c.stroke();
+    c.restore();
+  }
+  function desenharPagina(c, pag, L, A, img) {
+    c.fillStyle = '#fff'; c.fillRect(0, 0, L, A);
+    if (img) { c.drawImage(img, 0, 0, L, A); }
+    if (pag && pag.tracos) { cada(pag.tracos, function (id, t) { if (t) { desenharTraco(c, t, L); } }); }
+  }
+  function redesenhar() {
+    pedidoDesenho = false;
+    desenharPagina(ctx, paginaAtual(), larg, alt, imagemFundo);
+    if (tracoAtual) { desenharTraco(ctx, tracoAtual, larg); }
+  }
+  function agendarDesenho() {
+    if (pedidoDesenho) { return; }
+    pedidoDesenho = true;
+    (window.requestAnimationFrame || function (f) { setTimeout(f, 16); })(redesenhar);
+  }
+
+  function dimensionar() {
+    var pag = paginaAtual();
+    proporcao = (pag && pag.r) ? pag.r : 0.75;
+    var disponivel = (document.documentElement.clientWidth || window.innerWidth) - 20;
+    var alturaTela = (window.innerHeight || 700) - $('barra').offsetHeight - 24;
+    larg = Math.max(200, disponivel);
+    if (proporcao <= 1 && larg * proporcao > alturaTela) { larg = Math.max(200, alturaTela / proporcao); }
+    larg = Math.floor(larg); alt = Math.floor(larg * proporcao);
+    var dpr = window.devicePixelRatio || 1;
+    escala = Math.min(dpr, Math.sqrt(4000000 / (larg * alt)));
+    canvas.style.width = larg + 'px'; canvas.style.height = alt + 'px';
+    canvas.width = Math.round(larg * escala); canvas.height = Math.round(alt * escala);
+    ctx.setTransform(escala, 0, 0, escala, 0, 0);
+    $('area').style.paddingTop = ($('barra').offsetHeight + 10) + 'px';
+    redesenhar();
+  }
+
+  function prepararFundo() {
+    var pag = paginaAtual();
+    var src = pag && pag.fundo ? pag.fundo : null;
+    if ((pag && pag.r ? pag.r : 0.75) !== proporcao) { dimensionar(); }
+    if (src === fundoDaPagina) { return; }
+    fundoDaPagina = src;
+    imagemFundo = null;
+    if (!src) { agendarDesenho(); return; }
+    var img = new Image();
+    img.onload = function () { if (fundoDaPagina === src) { imagemFundo = img; agendarDesenho(); } };
+    img.src = src;
+  }
+
+  function ponto(x, y) {
+    var r = canvas.getBoundingClientRect();
+    return [Math.round((x - r.left) / larg * 10000) / 10000, Math.round((y - r.top) / larg * 10000) / 10000];
+  }
+
+  /* borracha: apaga traços que passam perto do dedo */
+  function distSeg(px, py, ax, ay, bx, by) {
+    var dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy, t = 0;
+    if (l > 0) { t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l)); }
+    var qx = ax + t * dx - px, qy = ay + t * dy - py;
+    return Math.sqrt(qx * qx + qy * qy);
+  }
+  function apagarPerto(q) {
+    var pid = paginaAtualId(), pag = paginaAtual();
+    if (!pag || !pag.tracos) { return; }
+    var raio = 0.015;
+    cada(pag.tracos, function (id, t) {
+      if (!t || !t.p) { return; }
+      var p = t.p, perto = false, lim = raio + (t.w || 0.003) / 2;
+      if (p.length === 2) { perto = distSeg(q[0], q[1], p[0], p[1], p[0], p[1]) < lim; }
+      for (var i = 2; i < p.length && !perto; i += 2) { if (distSeg(q[0], q[1], p[i - 2], p[i - 1], p[i], p[i + 1]) < lim) { perto = true; } }
+      if (perto) {
+        delete pag.tracos[id];
+        requisicao('DELETE', urlBanco(caminhoSala('paginas/' + pid + '/tracos/' + id)));
+      }
+    });
+    agendarDesenho();
+  }
+
+  function comecar(x, y) {
+    if (!paginaAtualId()) { return; }
+    var q = ponto(x, y);
+    if (ferramenta === 'borracha') { tracoAtual = { borracha: true }; apagarPerto(q); return; }
+    var w = cor === '#f2c200' ? 0.02 : (grossa ? 0.007 : 0.003);
+    tracoAtual = { c: cor, w: w, p: [q[0], q[1]] };
+    agendarDesenho();
+  }
+  function mover(x, y) {
+    if (!tracoAtual) { return; }
+    var q = ponto(x, y);
+    if (tracoAtual.borracha) { apagarPerto(q); return; }
+    var p = tracoAtual.p, n = p.length;
+    if (Math.abs(q[0] - p[n - 2]) + Math.abs(q[1] - p[n - 1]) < 0.002) { return; }
+    p.push(q[0], q[1]);
+    /* desenha só o novo segmento: rápido no iPad 3 */
+    ctx.save();
+    if (tracoAtual.c === '#f2c200') { ctx.globalAlpha = 0.4; }
+    ctx.strokeStyle = tracoAtual.c; ctx.lineWidth = largura(tracoAtual); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(p[n - 2] * larg, p[n - 1] * larg); ctx.lineTo(q[0] * larg, q[1] * larg); ctx.stroke();
+    ctx.restore();
+  }
+  function terminar() {
+    if (!tracoAtual) { return; }
+    var t = tracoAtual; tracoAtual = null;
+    if (t.borracha) { return; }
+    var pid = paginaAtualId(), id = idNovo(), pag = sala.paginas[pid];
+    if (!pag.tracos) { pag.tracos = {}; }
+    pag.tracos[id] = t;
+    meusTracos.push({ pag: pid, id: id });
+    agendarDesenho();
+    requisicao('PUT', urlBanco(caminhoSala('paginas/' + pid + '/tracos/' + id)), t, function (err) {
+      if (err) { avisar('Sem conexão: o traço não foi enviado.', 3000); }
+    });
+  }
+
+  canvas.addEventListener('touchstart', function (e) {
+    if (ferramenta === 'mao') { return; }
+    e.preventDefault(); var t = e.changedTouches[0]; comecar(t.clientX, t.clientY);
+  }, false);
+  canvas.addEventListener('touchmove', function (e) {
+    if (ferramenta === 'mao') { return; }
+    e.preventDefault(); var t = e.changedTouches[0]; mover(t.clientX, t.clientY);
+  }, false);
+  canvas.addEventListener('touchend', function (e) { if (ferramenta === 'mao') { return; } e.preventDefault(); terminar(); }, false);
+  canvas.addEventListener('touchcancel', function () { terminar(); }, false);
+  canvas.addEventListener('mousedown', function (e) { if (ferramenta !== 'mao') { comecar(e.clientX, e.clientY); } }, false);
+  canvas.addEventListener('mousemove', function (e) { mover(e.clientX, e.clientY); }, false);
+  window.addEventListener('mouseup', terminar, false);
+
+  /* ---------- páginas ---------- */
+  function irPara(pid) {
+    sala.atual = pid;
+    prepararFundo(); dimensionar(); atualizarInterface();
+    requisicao('PUT', urlBanco(caminhoSala('atual')), pid);
+  }
+  function criarPagina(dados, cb) {
+    var lista = paginasOrdenadas();
+    var o = lista.length ? sala.paginas[lista[lista.length - 1].id].o + 1 : 1;
+    var pid = 'p' + idNovo();
+    dados.o = o;
+    sala.paginas[pid] = dados;
+    requisicao('PUT', urlBanco(caminhoSala('paginas/' + pid)), dados, function (err) { if (cb) { cb(err, pid); } });
+    return pid;
+  }
+
+  /* ---------- importar PDF / foto ---------- */
+  function imagemParaJpeg(img, cb) {
+    var f = Math.min(1, LARGURA_FUNDO / img.width);
+    var c = document.createElement('canvas');
+    c.width = Math.round(img.width * f); c.height = Math.round(img.height * f);
+    var x = c.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+    x.drawImage(img, 0, 0, c.width, c.height);
+    cb(c.toDataURL('image/jpeg', 0.75), c.height / c.width);
+  }
+  function importarFoto(arq) {
+    avisar('Enviando foto…', 0);
+    var leitor = new FileReader();
+    leitor.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        imagemParaJpeg(img, function (dados, r) {
+          var pid = criarPagina({ fundo: dados, r: r }, function (err) {
+            if (err) { avisar('Falha ao enviar a foto.', 3000); } else { esconderAviso(); }
+          });
+          irPara(pid);
+        });
+      };
+      img.onerror = function () { avisar('Não consegui abrir essa imagem.', 3000); };
+      img.src = leitor.result;
+    };
+    leitor.readAsDataURL(arq);
+  }
+  var pdfjsCarregando = false;
+  function carregarPdfjs(cb) {
+    if (window.pdfjsLib) { cb(); return; }
+    if (pdfjsCarregando) { return; }
+    pdfjsCarregando = true;
+    var s = document.createElement('script');
+    s.src = 'pdf.min.js';
+    s.onload = function () { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js'; cb(); };
+    s.onerror = function () { pdfjsCarregando = false; avisar('Não consegui carregar o leitor de PDF.', 4000); };
+    document.head.appendChild(s);
+  }
+  function importarPdf(arq) {
+    avisar('Abrindo PDF…', 0);
+    carregarPdfjs(function () {
+      var leitor = new FileReader();
+      leitor.onload = function () {
+        window.pdfjsLib.getDocument({ data: new Uint8Array(leitor.result) }).promise.then(function (doc) {
+          var total = Math.min(doc.numPages, MAX_PAGINAS_PDF), n = 1, primeira = null;
+          function proxima() {
+            if (n > total) {
+              avisar(doc.numPages > total ? 'PDF enviado (só as primeiras ' + total + ' páginas).' : 'PDF enviado: ' + total + ' páginas.', 3500);
+              return;
+            }
+            avisar('Enviando página ' + n + ' de ' + total + '…', 0);
+            doc.getPage(n).then(function (pg) {
+              var v0 = pg.getViewport({ scale: 1 });
+              var vp = pg.getViewport({ scale: LARGURA_FUNDO / v0.width });
+              var c = document.createElement('canvas');
+              c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+              var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+              pg.render({ canvasContext: x, viewport: vp }).promise.then(function () {
+                var pid = criarPagina({ fundo: c.toDataURL('image/jpeg', 0.75), r: c.height / c.width }, function (err) {
+                  if (err) { avisar('Falha ao enviar a página ' + (n - 1) + '.', 4000); return; }
+                  proxima();
+                });
+                if (!primeira) { primeira = pid; irPara(pid); }
+                n++;
+              });
+            });
+          }
+          proxima();
+        }, function () { avisar('Esse PDF não abriu (protegido ou corrompido?).', 4000); });
+      };
+      leitor.readAsArrayBuffer(arq);
+    });
+  }
+  $('arquivo').onchange = function (e) {
+    var arq = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!arq) { return; }
+    if (/pdf$/i.test(arq.type) || /\.pdf$/i.test(arq.name)) {
+      if (!MODERNO) { avisar('Este iPad não abre PDF. Envie o PDF por um celular ou computador.', 4500); return; }
+      importarPdf(arq);
+    } else { importarFoto(arq); }
+  };
+
+  /* ---------- salvar ---------- */
+  function renderizarTodas(cb) {
+    var lista = paginasOrdenadas(), saida = [], i = 0;
+    function proxima() {
+      if (i >= lista.length) { cb(saida); return; }
+      var pag = sala.paginas[lista[i].id]; i++;
+      var L = 1400, A = Math.round(L * (pag.r || 0.75));
+      var c = document.createElement('canvas'); c.width = L; c.height = A;
+      var x = c.getContext('2d');
+      function fim(img) { desenharPagina(x, pag, L, A, img); saida.push({ url: c.toDataURL('image/jpeg', 0.85), L: L, A: A }); proxima(); }
+      if (pag.fundo) { var img = new Image(); img.onload = function () { fim(img); }; img.onerror = function () { fim(null); }; img.src = pag.fundo; }
+      else { fim(null); }
+    }
+    proxima();
+  }
+  /* gerador de PDF mínimo: cada página é um JPEG */
+  function montarPdf(paginas) {
+    var partes = [], offsets = [], tamanho = 0, objs = [], i;
+    function binario(dataUrl) { var b = atob(dataUrl.split(',')[1]); var u = new Uint8Array(b.length); for (var k = 0; k < b.length; k++) { u[k] = b.charCodeAt(k); } return u; }
+    function add(s) { var u = typeof s === 'string' ? new Uint8Array(s.split('').map(function (ch) { return ch.charCodeAt(0) & 255; })) : s; partes.push(u); tamanho += u.length; }
+    function obj(n, conteudo) { offsets[n] = tamanho; add(n + ' 0 obj\n'); for (var k = 0; k < conteudo.length; k++) { add(conteudo[k]); } add('\nendobj\n'); }
+    var n = paginas.length, kids = [];
+    for (i = 0; i < n; i++) { kids.push((3 + i * 3) + ' 0 R'); }
+    add('%PDF-1.4\n');
+    obj(1, ['<< /Type /Catalog /Pages 2 0 R >>']);
+    obj(2, ['<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + n + ' >>']);
+    for (i = 0; i < n; i++) {
+      var p = paginas[i], W = 595, H = Math.round(595 * p.A / p.L), base = 3 + i * 3, jpg = binario(p.url);
+      var desenho = 'q ' + W + ' 0 0 ' + H + ' 0 0 cm /Im0 Do Q';
+      obj(base, ['<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Resources << /XObject << /Im0 ' + (base + 1) + ' 0 R >> >> /Contents ' + (base + 2) + ' 0 R >>']);
+      obj(base + 1, ['<< /Type /XObject /Subtype /Image /Width ' + p.L + ' /Height ' + p.A + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>\nstream\n', jpg, '\nendstream']);
+      obj(base + 2, ['<< /Length ' + desenho.length + ' >>\nstream\n' + desenho + '\nendstream']);
+    }
+    var total = 3 + n * 3, xref = tamanho, linhas = 'xref\n0 ' + total + '\n0000000000 65535 f \n';
+    for (i = 1; i < total; i++) { linhas += ('0000000000' + offsets[i]).slice(-10) + ' 00000 n \n'; }
+    add(linhas + 'trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF');
+    return new Blob(partes, { type: 'application/pdf' });
+  }
+  function nomeArquivo() {
+    var d = new Date();
+    return 'Lousa ' + codigoSala + ' ' + d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) + '.pdf';
+  }
+  function salvar() {
+    if (!paginasOrdenadas().length) { return; }
+    avisar('Preparando arquivo…', 0);
+    renderizarTodas(function (paginas) {
+      var baixarFunciona = 'download' in document.createElement('a') && typeof Blob !== 'undefined' && window.URL && URL.createObjectURL;
+      if (!MODERNO || !baixarFunciona) { mostrarImagensSalvas(paginas); esconderAviso(); return; }
+      var blob = montarPdf(paginas), nomeArq = nomeArquivo();
+      var arquivo = null;
+      try { arquivo = new File([blob], nomeArq, { type: 'application/pdf' }); } catch (e) {}
+      if (arquivo && navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+        esconderAviso();
+        avisarCompartilhar(arquivo);
+        return;
+      }
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = nomeArq;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      avisar('PDF salvo em Downloads.', 3000);
+    });
+  }
+  /* compartilhar precisa de um toque novo do usuário */
+  function avisarCompartilhar(arquivo) {
+    var el = $('aviso');
+    el.innerHTML = '';
+    el.appendChild(document.createTextNode('PDF pronto. '));
+    var b = document.createElement('button');
+    b.appendChild(document.createTextNode('Salvar / Compartilhar'));
+    b.className = 'primario';
+    b.onclick = function () {
+      navigator.share({ files: [arquivo], title: arquivo.name }).then(function () { esconderAviso(); }, function () { esconderAviso(); });
+    };
+    var f = document.createElement('button');
+    f.appendChild(document.createTextNode('Fechar'));
+    f.onclick = esconderAviso;
+    el.appendChild(b); el.appendChild(f);
+    el.className = '';
+  }
+  function mostrarImagensSalvas(paginas) {
+    var div = $('salvos');
+    div.innerHTML = '';
+    var topo = document.createElement('div');
+    var voltar = document.createElement('button');
+    voltar.className = 'primario';
+    voltar.appendChild(document.createTextNode('◀ Voltar para a lousa'));
+    voltar.onclick = function () { div.className = 'escondido'; div.innerHTML = ''; $('sala').className = ''; dimensionar(); };
+    topo.appendChild(voltar);
+    var p = document.createElement('p');
+    p.appendChild(document.createTextNode('Toque e segure em cada página → "Salvar Imagem". Elas vão para o app Fotos (e para o iCloud, se as Fotos do iCloud estiverem ativadas).'));
+    topo.appendChild(p);
+    div.appendChild(topo);
+    for (var i = 0; i < paginas.length; i++) {
+      var img = document.createElement('img');
+      img.src = paginas[i].url;
+      div.appendChild(img);
+    }
+    $('sala').className = 'escondido';
+    div.className = '';
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- interface ---------- */
+  function atualizarInterface() {
+    var lista = paginasOrdenadas(), pid = paginaAtualId(), pos = 0;
+    for (var i = 0; i < lista.length; i++) { if (lista[i].id === pid) { pos = i + 1; } }
+    texto($('paginaTxt'), (pos || 0) + '/' + lista.length);
+    var online = pessoasOnline();
+    texto($('nPessoas'), String(online.length));
+    if (!$('pessoas').className) { listarPessoas(); }
+  }
+  function listarPessoas() {
+    var div = $('pessoas'), online = pessoasOnline();
+    div.innerHTML = '';
+    var t = document.createElement('div'); t.style.fontWeight = 'bold';
+    t.appendChild(document.createTextNode('Na sala agora (' + online.length + ')'));
+    div.appendChild(t);
+    for (var i = 0; i < online.length; i++) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode('• ' + online[i].n + (online[i].id === uid ? ' (você)' : '')));
+      div.appendChild(d);
+    }
+    div.style.top = ($('barra').offsetHeight + 6) + 'px';
+  }
+  function selecionarFerramenta(f) {
+    ferramenta = f;
+    $('tCaneta').className = f === 'caneta' ? 'ativo' : '';
+    $('tBorracha').className = f === 'borracha' ? 'ativo' : '';
+    $('tMao').className = f === 'mao' ? 'ativo' : '';
+  }
+
+  var cores = document.querySelectorAll('.cor');
+  for (var ci = 0; ci < cores.length; ci++) {
+    cores[ci].onclick = function () {
+      for (var j = 0; j < cores.length; j++) { cores[j].className = 'cor'; }
+      this.className = 'cor ativo';
+      cor = this.getAttribute('data-cor');
+      selecionarFerramenta('caneta');
+    };
+  }
+  $('tCaneta').onclick = function () { selecionarFerramenta('caneta'); };
+  $('tGrossa').onclick = function () { grossa = !grossa; this.className = grossa ? 'ativo' : ''; selecionarFerramenta('caneta'); };
+  $('tBorracha').onclick = function () { selecionarFerramenta('borracha'); };
+  $('tMao').onclick = function () { selecionarFerramenta('mao'); };
+  $('bDesfazer').onclick = function () {
+    while (meusTracos.length) {
+      var u = meusTracos.pop(), pag = sala.paginas[u.pag];
+      if (pag && pag.tracos && pag.tracos[u.id]) {
+        delete pag.tracos[u.id];
+        requisicao('DELETE', urlBanco(caminhoSala('paginas/' + u.pag + '/tracos/' + u.id)));
+        if (u.pag !== paginaAtualId()) { irPara(u.pag); }
+        agendarDesenho();
+        return;
+      }
+    }
+    avisar('Nada para desfazer.', 1500);
+  };
+  $('bAnt').onclick = function () {
+    var lista = paginasOrdenadas(), pid = paginaAtualId();
+    for (var i = 1; i < lista.length; i++) { if (lista[i].id === pid) { irPara(lista[i - 1].id); return; } }
+  };
+  $('bProx').onclick = function () {
+    var lista = paginasOrdenadas(), pid = paginaAtualId();
+    for (var i = 0; i < lista.length - 1; i++) { if (lista[i].id === pid) { irPara(lista[i + 1].id); return; } }
+  };
+  $('bNovaPag').onclick = function () { irPara(criarPagina({ r: 0.75 })); };
+  $('bSalvar').onclick = salvar;
+  $('bPessoas').onclick = function () {
+    var div = $('pessoas');
+    if (div.className) { div.className = ''; listarPessoas(); } else { div.className = 'escondido'; }
+  };
+  $('bConvidar').onclick = function () {
+    var link = location.protocol + '//' + location.host + location.pathname + '?sala=' + codigoSala;
+    if (navigator.share) {
+      navigator.share({ title: 'Lousa de Estudos', text: 'Entre na minha sala de estudo (código ' + codigoSala + '):', url: link }).then(function () {}, function () {});
+    } else {
+      window.prompt('Envie este link (ou o código ' + codigoSala + ') para seus amigos:', link);
+    }
+  };
+  $('bSair').onclick = function () {
+    if (!window.confirm('Sair da sala? As anotações continuam salvas na sala.')) { return; }
+    location.href = location.pathname;
+  };
+  $('arquivo').setAttribute('accept', MODERNO ? 'application/pdf,image/*' : 'image/*');
+  if (!MODERNO) { texto($('importarTxt'), '🖼️ Foto'); }
+
+  /* ---------- entrar / criar sala ---------- */
+  var carregou = false;
+  function gerarCodigo() {
+    var letras = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', s = '';
+    for (var i = 0; i < 6; i++) { s += letras.charAt(Math.floor(Math.random() * letras.length)); }
+    return s;
+  }
+  function pegarNome() {
+    var n = ($('nome').value || '').replace(/^\s+|\s+$/g, '');
+    if (!n) { avisar('Digite seu nome primeiro.', 2500); $('nome').focus(); return null; }
+    guardar('lousa.nome', n);
+    return n;
+  }
+  function entrarNaSala(codigo, criar) {
+    nome = pegarNome();
+    if (!nome) { return; }
+    avisar('Conectando…', 0);
+    entrarFirebase(function (err) {
+      if (err) { avisar('Sem conexão com o servidor. Verifique a internet.', 4000); return; }
+      codigoSala = codigo;
+      carregou = false;
+      if (criar) {
+        var pid = 'p' + idNovo(), dados = { criada: { '.sv': 'timestamp' }, atual: pid, paginas: {} };
+        dados.paginas[pid] = { o: 1, r: 0.75 };
+        requisicao('PUT', urlBanco(caminhoSala()), dados, function (e2) {
+          if (e2) { avisar('Não consegui criar a sala.', 4000); return; }
+          abrirSala();
+        });
+      } else {
+        requisicao('GET', urlBanco(caminhoSala('criada')), undefined, function (e2, d) {
+          if (e2) { avisar('Sem conexão com o servidor.', 4000); return; }
+          if (d === null) { avisar('Sala ' + codigo + ' não existe. Confira o código.', 4000); return; }
+          abrirSala();
+        });
+      }
+    });
+  }
+  function abrirSala() {
+    texto($('codigoTxt'), codigoSala);
+    $('inicio').className = 'escondido';
+    $('sala').className = '';
+    try { history.replaceState(null, '', location.pathname + '?sala=' + codigoSala); } catch (e) {}
+    esconderAviso();
+    dimensionar();
+    conectarStream();
+    marcarPresenca();
+    clearInterval(timerPresenca);
+    timerPresenca = setInterval(function () { marcarPresenca(); atualizarInterface(); }, 20000);
+  }
+  function aoCarregarSala() {
+    if (!paginasOrdenadas().length) { irPara(criarPagina({ r: 0.75 })); }
+    prepararFundo(); dimensionar(); atualizarInterface();
+  }
+
+  $('bCriar').onclick = function () { entrarNaSala(gerarCodigo(), true); };
+  $('bEntrar').onclick = function () {
+    var c = ($('codigoEntrada').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (c.length !== 6) { avisar('O código tem 6 letras/números.', 2500); return; }
+    entrarNaSala(c, false);
+  };
+  $('codigoEntrada').onkeyup = function (e) { if (e.keyCode === 13) { $('bEntrar').onclick(); } };
+
+  var redimensionar = null;
+  window.addEventListener('resize', function () { clearTimeout(redimensionar); redimensionar = setTimeout(function () { if (codigoSala) { dimensionar(); } }, 200); }, false);
+  window.addEventListener('orientationchange', function () { setTimeout(function () { if (codigoSala) { dimensionar(); } }, 300); }, false);
+
+  $('nome').value = ler('lousa.nome') || '';
+  var mSala = location.search.match(/[?&]sala=([A-Za-z0-9]{6})/);
+  if (mSala) { $('codigoEntrada').value = mSala[1].toUpperCase(); }
+
+  window.__lousa = { sala: function () { return sala; }, codigo: function () { return codigoSala; } };
+})();
+</script>
+</body>
+</html>
