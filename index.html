@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Teste iPad 3</title>
+<style>
+  body { margin: 0; font-family: -apple-system, Helvetica, Arial, sans-serif; background: #f4f4f0; color: #222; }
+  h1 { font-size: 20px; margin: 12px 16px 4px; }
+  p.sub { margin: 0 16px 8px; color: #666; font-size: 14px; }
+  #resumo { margin: 8px 16px; padding: 12px; border-radius: 8px; font-size: 18px; font-weight: bold; }
+  .ok { background: #d9f2d9; } .falha { background: #f8d7d7; } .aviso { background: #fff1c2; }
+  table { border-collapse: collapse; margin: 8px 16px; width: calc(100% - 32px); font-size: 14px; }
+  td { padding: 6px 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
+  td.s { width: 70px; font-weight: bold; }
+  #codigo { margin: 8px 16px; padding: 10px; background: #222; color: #9f9; font-family: Courier, monospace; font-size: 16px; word-wrap: break-word; border-radius: 6px; }
+  .barra { margin: 8px 16px; }
+  button { font-size: 16px; padding: 10px 14px; margin: 0 6px 6px 0; border: 1px solid #888; border-radius: 6px; background: #fff; }
+  #lousa { display: block; margin: 0 16px 24px; background: #fff; border: 2px solid #888; border-radius: 6px; }
+</style>
+</head>
+<body>
+<h1>Diagnóstico da lousa – iPad 3</h1>
+<p class="sub">Abra no Safari do iPad, espere carregar, teste a lousa e tire um print (botão Início + Liga/Desliga).</p>
+<div id="resumo" class="aviso">Rodando testes… (se esta mensagem não mudar, o JavaScript falhou)</div>
+<div id="codigo">-</div>
+<table id="tabela"></table>
+
+<h1>Lousa de teste</h1>
+<p class="sub">Desenhe com o dedo. Depois toque em “Salvar imagem” e, na imagem que abrir, toque e segure → Salvar Imagem.</p>
+<div class="barra">
+  <button id="bPreto">Preto</button><button id="bAzul">Azul</button><button id="bVermelho">Vermelho</button>
+  <button id="bLimpar">Limpar</button><button id="bSalvar">Salvar imagem</button>
+</div>
+<canvas id="lousa"></canvas>
+
+<script>
+/* ES5 apenas: Safari 9 (iOS 9.3.5) */
+(function () {
+  'use strict';
+  var resultados = [];
+  var tabela = document.getElementById('tabela');
+
+  function registrar(id, nome, essencial, passou, detalhe) {
+    resultados.push({ id: id, nome: nome, essencial: essencial, passou: passou });
+    var tr = document.createElement('tr');
+    tr.className = passou ? 'ok' : (essencial ? 'falha' : 'aviso');
+    var a = document.createElement('td'); a.className = 's';
+    a.appendChild(document.createTextNode(passou ? 'OK' : (essencial ? 'FALHOU' : 'não tem')));
+    var b = document.createElement('td');
+    b.appendChild(document.createTextNode(nome + (detalhe ? ' — ' + detalhe : '')));
+    tr.appendChild(a); tr.appendChild(b); tabela.appendChild(tr);
+  }
+
+  function testar(id, nome, essencial, fn) {
+    var passou = false, detalhe = '';
+    try { var r = fn(); passou = !!r; if (typeof r === 'string') { detalhe = r; } }
+    catch (e) { passou = false; detalhe = 'erro: ' + (e && e.message ? e.message : e); }
+    registrar(id, nome, essencial, passou, detalhe);
+  }
+
+  function sintaxe(codigo) { return function () { /* jshint evil:true */ new Function(codigo); return true; }; }
+
+  var ua = navigator.userAgent;
+  var m = ua.match(/OS (\d+)_(\d+)/);
+  var versaoIOS = m ? m[1] + '.' + m[2] : 'desconhecida';
+
+  /* Essenciais para a lousa */
+  testar('cv', 'Canvas 2D', true, function () { var c = document.createElement('canvas'); return !!(c.getContext && c.getContext('2d')); });
+  testar('to', 'Toque (touch events)', true, function () { return 'ontouchstart' in window ? true : false; });
+  testar('du', 'Exportar imagem (toDataURL)', true, function () { var c = document.createElement('canvas'); c.width = 2; c.height = 2; return c.toDataURL('image/png').indexOf('data:image/png') === 0; });
+  testar('js', 'JSON', true, function () { return JSON.parse(JSON.stringify({ a: 1 })).a === 1; });
+  testar('bi', 'Function.bind', true, function () { return typeof Function.prototype.bind === 'function'; });
+  testar('ws', 'WebSocket (tempo real)', true, function () { return typeof WebSocket !== 'undefined'; });
+  testar('xh', 'XMLHttpRequest', true, function () { return typeof XMLHttpRequest !== 'undefined'; });
+  testar('pr', 'Promise', true, function () { return typeof Promise !== 'undefined'; });
+  testar('ta', 'Uint8Array (ler PDF)', true, function () { return typeof Uint8Array !== 'undefined'; });
+  testar('wk', 'Web Worker (ler PDF)', true, function () { return typeof Worker !== 'undefined'; });
+  testar('ls', 'localStorage gravável', false, function () { localStorage.setItem('_t', '1'); localStorage.removeItem('_t'); return true; });
+
+  /* Informativos: definem como o código tem que ser escrito */
+  testar('fe', 'fetch', false, function () { return typeof fetch !== 'undefined'; });
+  testar('ar', 'Arrow functions', false, sintaxe('var f = (x) => x;'));
+  testar('cl', 'class', false, sintaxe('class A {}'));
+  testar('lc', 'let/const fora do strict', false, sintaxe('let a = 1; const b = 2;'));
+  testar('as', 'async/await', false, sintaxe('async function f() { await 1; }'));
+  testar('pe', 'Pointer events (Pencil)', false, function () { return typeof window.PointerEvent !== 'undefined'; });
+  testar('gm', 'Câmera/microfone (getUserMedia)', false, function () { return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia); });
+  testar('rt', 'WebRTC', false, function () { return typeof window.RTCPeerConnection !== 'undefined' || typeof window.webkitRTCPeerConnection !== 'undefined'; });
+
+  /* Teste de rede real contra o Firebase: o iOS 9 pode recusar certificados atuais.
+     Use ?db=nome-do-banco para testar o banco real. */
+  var mdb = location.search.match(/[?&]db=([a-z0-9-]+)/);
+  var hostFirebase = (mdb ? mdb[1] : 'teste-conexao-ipad-default-rtdb') + '.firebaseio.com';
+
+  function testeHTTPS(fim) {
+    var feito = false, xhr = new XMLHttpRequest();
+    function concluir(ok, det) { if (feito) { return; } feito = true; registrar('nh', 'HTTPS com Firebase (' + hostFirebase + ')', true, ok, det); fim(); }
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState === 4) {
+        if (xhr.status > 0) { concluir(true, 'servidor respondeu (' + xhr.status + ')'); }
+        else { concluir(false, 'sem resposta: certificado recusado ou sem internet'); }
+      }
+    };
+    setTimeout(function () { try { xhr.abort(); } catch (e) {} concluir(false, 'tempo esgotado (10 s)'); }, 10000);
+    try { xhr.open('GET', 'https://' + hostFirebase + '/.json', true); xhr.send(); }
+    catch (e) { concluir(false, 'erro: ' + e.message); }
+  }
+
+  function testeWS(fim) {
+    var feito = false, ws;
+    function concluir(ok, det) { if (feito) { return; } feito = true; try { ws.close(); } catch (e) {} registrar('ne', 'WebSocket seguro com Firebase (tempo real)', true, ok, det); fim(); }
+    try {
+      ws = new WebSocket('wss://' + hostFirebase + '/.ws?v=5&ns=' + hostFirebase.split('.')[0]);
+      ws.onopen = function () { concluir(true, 'conectou'); };
+      ws.onmessage = function () { concluir(true, 'recebeu resposta'); };
+      ws.onerror = function () { concluir(false, 'erro de conexão (certificado/TLS antigo?)'); };
+      setTimeout(function () { concluir(false, 'tempo esgotado (10 s)'); }, 10000);
+    } catch (e) { concluir(false, 'erro: ' + e.message); }
+  }
+
+  function testeRede(fim) { testeHTTPS(function () { testeWS(fim); }); }
+
+  function finalizar() {
+    var falhasEssenciais = [], bits = [];
+    for (var i = 0; i < resultados.length; i++) {
+      bits.push(resultados[i].id + (resultados[i].passou ? '1' : '0'));
+      if (resultados[i].essencial && !resultados[i].passou) { falhasEssenciais.push(resultados[i].nome); }
+    }
+    var resumo = document.getElementById('resumo');
+    if (falhasEssenciais.length === 0) {
+      resumo.className = 'ok';
+      resumo.innerHTML = '';
+      resumo.appendChild(document.createTextNode('Tudo o que a lousa precisa funciona neste aparelho (iOS ' + versaoIOS + ').'));
+    } else {
+      resumo.className = 'falha';
+      resumo.innerHTML = '';
+      resumo.appendChild(document.createTextNode('Faltam itens essenciais (iOS ' + versaoIOS + '): ' + falhasEssenciais.join(', ')));
+    }
+    document.getElementById('codigo').innerHTML = '';
+    document.getElementById('codigo').appendChild(document.createTextNode('iOS' + versaoIOS + ' ' + bits.join(' ')));
+    window.__resultado = { ios: versaoIOS, resultados: resultados };
+  }
+
+  testeRede(finalizar);
+
+  /* ---------- Lousa ---------- */
+  var canvas = document.getElementById('lousa');
+  var ctx = canvas.getContext('2d');
+  var escala = window.devicePixelRatio || 1;
+  var cor = '#111';
+  var desenhando = false, ultimo = null;
+
+  function dimensionar() {
+    var largura = Math.max(200, (document.documentElement.clientWidth || window.innerWidth) - 36);
+    var altura = Math.round(largura * 0.6);
+    canvas.style.width = largura + 'px';
+    canvas.style.height = altura + 'px';
+    canvas.width = Math.round(largura * escala);
+    canvas.height = Math.round(altura * escala);
+    ctx.setTransform(escala, 0, 0, escala, 0, 0);
+    limpar();
+  }
+  function limpar() {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  function ponto(clientX, clientY) {
+    var r = canvas.getBoundingClientRect();
+    return { x: clientX - r.left, y: clientY - r.top };
+  }
+  function tracar(p) {
+    ctx.strokeStyle = cor; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(ultimo.x, ultimo.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    ultimo = p;
+  }
+
+  canvas.addEventListener('touchstart', function (e) { e.preventDefault(); var t = e.changedTouches[0]; desenhando = true; ultimo = ponto(t.clientX, t.clientY); }, false);
+  canvas.addEventListener('touchmove', function (e) { e.preventDefault(); if (!desenhando) { return; } var t = e.changedTouches[0]; tracar(ponto(t.clientX, t.clientY)); }, false);
+  canvas.addEventListener('touchend', function (e) { e.preventDefault(); desenhando = false; }, false);
+  canvas.addEventListener('mousedown', function (e) { desenhando = true; ultimo = ponto(e.clientX, e.clientY); }, false);
+  canvas.addEventListener('mousemove', function (e) { if (desenhando) { tracar(ponto(e.clientX, e.clientY)); } }, false);
+  window.addEventListener('mouseup', function () { desenhando = false; }, false);
+
+  document.getElementById('bPreto').onclick = function () { cor = '#111'; };
+  document.getElementById('bAzul').onclick = function () { cor = '#1a5fd0'; };
+  document.getElementById('bVermelho').onclick = function () { cor = '#d0261a'; };
+  document.getElementById('bLimpar').onclick = limpar;
+  document.getElementById('bSalvar').onclick = function () {
+    var url = canvas.toDataURL('image/png');
+    var w = window.open('', '_blank');
+    if (w) {
+      w.document.write('<title>Anotação</title><p style="font:16px Helvetica">Toque e segure na imagem → Salvar Imagem</p><img src="' + url + '" style="max-width:100%;border:1px solid #888">');
+      w.document.close();
+    } else {
+      alert('O Safari bloqueou a nova janela. Desative o bloqueio de pop-ups e tente de novo.');
+    }
+  };
+
+  dimensionar();
+})();
+</script>
+</body>
+</html>
