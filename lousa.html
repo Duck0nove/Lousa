@@ -17,6 +17,11 @@
   button.ativo { background: #1f3a5f; color: #fff; border-color: #1f3a5f; }
   button.primario { background: #1f3a5f; color: #fff; border-color: #1f3a5f; font-weight: bold; }
   .botao input { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; font-size: 100px; }
+  i[data-ic] { display: inline-block; font-style: normal; }
+  .ic { display: inline-block; width: 18px; height: 18px; vertical-align: -4px; margin-right: 6px; }
+  .so .ic { margin-right: 0; }
+  @media (max-width: 1199px) { #barra .rot { display: none; } #barra .ic { margin-right: 0; width: 20px; height: 20px; } }
+  .ic path { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .cor { width: 40px; height: 40px; padding: 0; border-radius: 20px; border: 3px solid #fff; box-shadow: 0 0 0 1px #b9b6ad; }
   .cor.ativo { box-shadow: 0 0 0 3px #1f3a5f; }
 
@@ -76,7 +81,7 @@
 <div id="sala" class="escondido">
   <div id="barra">
     <span class="grupo" id="infoSala">Sala <b id="codigoTxt">------</b></span>
-    <span class="grupo"><button id="bConvidar">Convidar</button><button id="bPessoas">👥 <span id="nPessoas">1</span></button></span>
+    <span class="grupo"><button id="bConvidar" title="Convidar"><i data-ic="convidar"></i><span class="rot">Convidar</span></button><button id="bPessoas"><i data-ic="pessoas"></i><span id="nPessoas">1</span></button></span>
     <span class="grupo">
       <button class="cor ativo" data-cor="#111111" style="background:#111111"></button>
       <button class="cor" data-cor="#1a5fd0" style="background:#1a5fd0"></button>
@@ -85,13 +90,13 @@
       <button class="cor" data-cor="#f2c200" style="background:#f2c200" title="Marca-texto"></button>
     </span>
     <span class="grupo">
-      <button id="tCaneta" class="ativo">✏️ Caneta</button><button id="tGrossa">Grossa</button><button id="tBorracha">Borracha</button><button id="tMao">✋ Rolar</button><button id="bDesfazer">↶ Desfazer</button>
+      <button id="tCaneta" class="ativo" title="Caneta"><i data-ic="caneta"></i><span class="rot">Caneta</span></button><button id="tGrossa" title="Grossa"><i data-ic="grossa"></i><span class="rot">Grossa</span></button><button id="tBorracha" title="Borracha"><i data-ic="borracha"></i><span class="rot">Borracha</span></button><button id="tMao" title="Rolar"><i data-ic="rolar"></i><span class="rot">Rolar</span></button><button id="bDesfazer" title="Desfazer"><i data-ic="desfazer"></i><span class="rot">Desfazer</span></button>
     </span>
     <span class="grupo">
-      <button id="bAnt">◀</button><span id="paginaTxt">1/1</span><button id="bProx">▶</button><button id="bNovaPag">+ Página</button>
+      <button id="bAnt" title="Página anterior"><i data-ic="anterior" class="so"></i></button><span id="paginaTxt">1/1</span><button id="bProx" title="Próxima página"><i data-ic="proxima" class="so"></i></button><button id="bNovaPag" title="Página"><i data-ic="mais"></i><span class="rot">Página</span></button>
     </span>
     <span class="grupo">
-      <span class="botao" id="importarBotao"><span id="importarTxt">📄 PDF/Foto</span><input id="arquivo" type="file"></span><button id="bSalvar">💾 Salvar</button><button id="bSair">Sair</button>
+      <span class="botao" id="importarBotao"><span id="importarTxt"><i data-ic="arquivo"></i><span class="rot">PDF/Foto</span></span><input id="arquivo" type="file"></span><button id="bSalvar" title="Salvar"><i data-ic="salvar"></i><span class="rot">Salvar</span></button><button id="bSair" title="Sair"><i data-ic="sair"></i><span class="rot">Sair</span></button>
     </span>
   </div>
   <div id="area"><canvas id="lousa"></canvas></div>
@@ -115,6 +120,7 @@
   };
   var MAX_PAGINAS_PDF = 40;
   var LARGURA_FUNDO = 1400;
+  var PDFJS_BASE = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/';
 
   /* ---------- utilidades ---------- */
   function $(id) { return document.getElementById(id); }
@@ -133,6 +139,33 @@
   function cada(obj, fn) { for (var k in obj) { if (obj.hasOwnProperty(k)) { fn(k, obj[k]); } } }
   function navegadorModerno() { try { new Function('var f = (x) => x;'); return true; } catch (e) { return false; } }
   var MODERNO = navegadorModerno();
+
+  /* ícones SVG (traço), funcionam no Safari 9 */
+  var ICONES = {
+    convidar: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2|M5 7a4 4 0 1 0 8 0a4 4 0 1 0-8 0|M19 8v6|M22 11h-6',
+    pessoas: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2|M5 7a4 4 0 1 0 8 0a4 4 0 1 0-8 0|M23 21v-2a4 4 0 0 0-3-3.87|M16 3.13a4 4 0 0 1 0 7.75',
+    caneta: 'M12 20h9|M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z',
+    grossa: 'M4 19c4-1 6-5 9-8s5-4 7-5',
+    borracha: 'M20 20H8l-4.5-4.5a1.5 1.5 0 0 1 0-2.1L13.4 3.5a1.5 1.5 0 0 1 2.1 0l5 5a1.5 1.5 0 0 1 0 2.1L11 20|M8.5 8.5l7 7',
+    rolar: 'M5 9l-3 3 3 3|M9 5l3-3 3 3|M15 19l-3 3-3-3|M19 9l3 3-3 3|M2 12h20|M12 2v20',
+    desfazer: 'M3 7v6h6|M21 17a9 9 0 0 0-15-6.7L3 13',
+    anterior: 'M15 18l-6-6 6-6',
+    proxima: 'M9 18l6-6-6-6',
+    mais: 'M12 5v14|M5 12h14',
+    arquivo: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z|M14 2v6h6|M12 18v-6|M9 15h6',
+    imagem: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z|M7 8.5a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0|M21 15l-5-5L5 21',
+    salvar: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4|M7 10l5 5 5-5|M12 15V3',
+    sair: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4|M16 17l5-5-5-5|M21 12H9'
+  };
+  function icone(nome) {
+    var d = ICONES[nome].split('|'), s = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">';
+    for (var i = 0; i < d.length; i++) { s += '<path d="' + d[i] + '"' + (nome === 'grossa' && i === 0 ? ' style="stroke-width:4.5"' : '') + '/>'; }
+    return s + '</svg>';
+  }
+  (function () {
+    var els = document.querySelectorAll('i[data-ic]');
+    for (var i = 0; i < els.length; i++) { els[i].innerHTML = icone(els[i].getAttribute('data-ic')); }
+  })();
 
   /* ---------- HTTP / autenticação ---------- */
   var token = null, uid = null, refreshToken = ler('lousa.refresh');
@@ -472,8 +505,8 @@
     if (pdfjsCarregando) { return; }
     pdfjsCarregando = true;
     var s = document.createElement('script');
-    s.src = 'pdf.min.js';
-    s.onload = function () { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js'; cb(); };
+    s.src = PDFJS_BASE + 'pdf.min.js';
+    s.onload = function () { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + 'pdf.worker.min.js'; cb(); };
     s.onerror = function () { pdfjsCarregando = false; avisar('Não consegui carregar o leitor de PDF.', 4000); };
     document.head.appendChild(s);
   }
@@ -607,7 +640,7 @@
     var topo = document.createElement('div');
     var voltar = document.createElement('button');
     voltar.className = 'primario';
-    voltar.appendChild(document.createTextNode('◀ Voltar para a lousa'));
+    voltar.innerHTML = icone('anterior') + 'Voltar para a lousa';
     voltar.onclick = function () { div.className = 'escondido'; div.innerHTML = ''; $('sala').className = ''; dimensionar(); };
     topo.appendChild(voltar);
     var p = document.createElement('p');
@@ -706,7 +739,7 @@
     location.href = location.pathname;
   };
   $('arquivo').setAttribute('accept', MODERNO ? 'application/pdf,image/*' : 'image/*');
-  if (!MODERNO) { texto($('importarTxt'), '🖼️ Foto'); }
+  if (!MODERNO) { $('importarTxt').innerHTML = icone('imagem') + '<span class="rot">Foto</span>'; }
 
   /* ---------- entrar / criar sala ---------- */
   var carregou = false;
