@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Teste 2 – Lousa ao vivo</title>
+<style>
+  body { margin: 0; font-family: -apple-system, Helvetica, Arial, sans-serif; background: #f4f4f0; color: #222; }
+  h1 { font-size: 20px; margin: 12px 16px 4px; }
+  p.sub { margin: 0 16px 8px; color: #555; font-size: 14px; }
+  #resumo { margin: 8px 16px; padding: 12px; border-radius: 8px; font-size: 18px; font-weight: bold; }
+  .ok { background: #d9f2d9; } .falha { background: #f8d7d7; } .aviso { background: #fff1c2; }
+  table { border-collapse: collapse; margin: 8px 16px; width: calc(100% - 32px); font-size: 14px; }
+  td { padding: 6px 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
+  td.s { width: 80px; font-weight: bold; }
+  #codigo { margin: 8px 16px; padding: 10px; background: #222; color: #9f9; font-family: Courier, monospace; font-size: 16px; word-wrap: break-word; border-radius: 6px; }
+  .barra { margin: 8px 16px; }
+  button, .botao { display: inline-block; font-size: 16px; padding: 10px 14px; margin: 0 6px 6px 0; border: 1px solid #888; border-radius: 6px; background: #fff; color: #222; position: relative; overflow: hidden; }
+  .botao input { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; }
+  #lousa { display: block; margin: 0 16px 24px; background: #fff; border: 2px solid #888; border-radius: 6px; }
+  #contagem { margin: 0 16px; font-size: 14px; color: #555; }
+</style>
+</head>
+<body>
+<h1>Teste 2 – Lousa ao vivo</h1>
+<p class="sub">Abra esta página no iPad 3 e no Android ao mesmo tempo. Desenhe num aparelho e veja se aparece no outro (pode levar 1–2 segundos).</p>
+<div id="resumo" class="aviso">Rodando testes… (se não mudar, o JavaScript falhou)</div>
+<div id="codigo">-</div>
+<table id="tabela"></table>
+
+<h1>Lousa compartilhada (sala de teste)</h1>
+<div class="barra">
+  <button id="bPreto">Preto</button><button id="bAzul">Azul</button><button id="bVermelho">Vermelho</button>
+  <span class="botao">Pôr foto de fundo<input id="foto" type="file" accept="image/*"></span>
+  <button id="bLimpar">Limpar tudo</button><button id="bSalvar">Salvar imagem</button>
+</div>
+<div id="contagem">Traços na sala: 0</div>
+<canvas id="lousa"></canvas>
+
+<script>
+/* ES5 apenas: Safari 9 (iOS 9.3.5). Firebase via REST + EventSource, sem SDK. */
+(function () {
+  'use strict';
+  var CONFIG = {
+    apiKey: 'AIzaSyAw-Wt1ITwJIlV6DHgs1FbZdZmabuyfsqA',
+    databaseURL: 'https://lousa-4f648-default-rtdb.firebaseio.com'
+  };
+  var SALA = 'salas/teste';
+  var token = null, uid = null;
+
+  /* ---------- tabela de resultados ---------- */
+  var resultados = [];
+  function registrar(id, nome, passou, detalhe) {
+    resultados.push({ id: id, nome: nome, passou: passou });
+    var tr = document.createElement('tr');
+    tr.className = passou ? 'ok' : 'falha';
+    var a = document.createElement('td'); a.className = 's';
+    a.appendChild(document.createTextNode(passou ? 'OK' : 'FALHOU'));
+    var b = document.createElement('td');
+    b.appendChild(document.createTextNode(nome + (detalhe ? ' — ' + detalhe : '')));
+    tr.appendChild(a); tr.appendChild(b);
+    document.getElementById('tabela').appendChild(tr);
+    atualizarResumo();
+  }
+  var m = navigator.userAgent.match(/OS (\d+)_(\d+)/);
+  var versaoIOS = m ? m[1] + '.' + m[2] : 'outro';
+  function atualizarResumo() {
+    var falhas = [], bits = [];
+    for (var i = 0; i < resultados.length; i++) {
+      bits.push(resultados[i].id + (resultados[i].passou ? '1' : '0'));
+      if (!resultados[i].passou) { falhas.push(resultados[i].nome); }
+    }
+    var r = document.getElementById('resumo');
+    r.innerHTML = '';
+    if (falhas.length) {
+      r.className = 'falha';
+      r.appendChild(document.createTextNode('Falhou: ' + falhas.join(', ')));
+    } else if (resultados.length >= 4) {
+      r.className = 'ok';
+      r.appendChild(document.createTextNode('Conexão ao vivo funcionando (iOS ' + versaoIOS + '). Agora teste desenhar nos dois aparelhos.'));
+    }
+    var c = document.getElementById('codigo');
+    c.innerHTML = '';
+    c.appendChild(document.createTextNode('T2 iOS' + versaoIOS + ' ' + bits.join(' ')));
+    window.__resultado = resultados;
+  }
+
+  /* ---------- HTTP ---------- */
+  function requisicao(metodo, url, corpo, cb) {
+    var xhr = new XMLHttpRequest();
+    var feito = false;
+    function fim(err, dados) { if (feito) { return; } feito = true; cb(err, dados); }
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) { return; }
+      var dados = null;
+      try { dados = xhr.responseText ? JSON.parse(xhr.responseText) : null; } catch (e) {}
+      if (xhr.status >= 200 && xhr.status < 300) { fim(null, dados); }
+      else { fim('HTTP ' + xhr.status + (dados && dados.error ? ' ' + (dados.error.message || dados.error) : ''), dados); }
+    };
+    setTimeout(function () { try { xhr.abort(); } catch (e) {} fim('tempo esgotado'); }, 15000);
+    xhr.open(metodo, url, true);
+    if (corpo !== undefined) { xhr.setRequestHeader('Content-Type', 'application/json'); }
+    xhr.send(corpo === undefined ? null : JSON.stringify(corpo));
+  }
+  function urlBanco(caminho) { return CONFIG.databaseURL + '/' + caminho + '.json?auth=' + encodeURIComponent(token); }
+
+  /* ---------- sequência de testes ---------- */
+  function passo1Login() {
+    requisicao('POST', 'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + CONFIG.apiKey, { returnSecureToken: true }, function (err, d) {
+      if (err || !d || !d.idToken) { registrar('lg', 'Login anônimo (identitytoolkit.googleapis.com)', false, err || 'sem token'); return; }
+      token = d.idToken; uid = d.localId;
+      registrar('lg', 'Login anônimo (identitytoolkit.googleapis.com)', true, 'entrou');
+      passo2Renovar(d.refreshToken);
+    });
+  }
+  function passo2Renovar(refresh) {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) { return; }
+      var ok = false;
+      try { ok = xhr.status === 200 && !!JSON.parse(xhr.responseText).id_token; } catch (e) {}
+      registrar('rf', 'Renovar sessão (securetoken.googleapis.com)', ok, ok ? 'renovou' : 'HTTP ' + xhr.status);
+      passo3Gravar();
+    };
+    xhr.open('POST', 'https://securetoken.googleapis.com/v1/token?key=' + CONFIG.apiKey, true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.send('grant_type=refresh_token&refresh_token=' + encodeURIComponent(refresh));
+  }
+  function passo3Gravar() {
+    var valor = { quando: new Date().getTime(), ios: versaoIOS };
+    requisicao('PUT', urlBanco(SALA + '/ping/' + uid), valor, function (err) {
+      if (err) { registrar('gv', 'Gravar no banco', false, err); return; }
+      requisicao('GET', urlBanco(SALA + '/ping/' + uid), undefined, function (err2, d) {
+        var ok = !err2 && d && d.quando === valor.quando;
+        registrar('gv', 'Gravar e ler no banco', ok, ok ? 'leu o que gravou' : (err2 || 'valor diferente'));
+        passo4Ouvir();
+      });
+    });
+  }
+
+  /* ---------- tempo real ---------- */
+  var sala = { tracos: {}, fundo: null };
+  var imagemFundo = null;
+  var recebeuStream = false;
+
+  function aplicar(caminho, dados, mesclar) {
+    var partes = caminho.split('/');
+    var limpo = [];
+    for (var i = 0; i < partes.length; i++) { if (partes[i]) { limpo.push(partes[i]); } }
+    if (limpo.length === 0) {
+      if (mesclar) { for (var k in dados) { if (dados.hasOwnProperty(k)) { aplicar('/' + k, dados[k], false); } } return; }
+      sala = { tracos: (dados && dados.tracos) || {}, fundo: (dados && dados.fundo) || null };
+      carregarFundo();
+    } else if (limpo[0] === 'tracos') {
+      if (limpo.length === 1) {
+        if (mesclar) { for (var k2 in dados) { if (dados.hasOwnProperty(k2)) { if (dados[k2] === null) { delete sala.tracos[k2]; } else { sala.tracos[k2] = dados[k2]; } } } }
+        else { sala.tracos = dados || {}; }
+      } else if (dados === null) { delete sala.tracos[limpo[1]]; }
+      else { sala.tracos[limpo[1]] = dados; }
+    } else if (limpo[0] === 'fundo') {
+      sala.fundo = dados; carregarFundo();
+    }
+    redesenhar();
+  }
+
+  function passo4Ouvir() {
+    if (typeof EventSource === 'undefined') { registrar('ev', 'Receber ao vivo (EventSource)', false, 'navegador não suporta'); return; }
+    var fonte = new EventSource(urlBanco(SALA));
+    var timer = setTimeout(function () { if (!recebeuStream) { registrar('ev', 'Receber ao vivo (EventSource)', false, 'nada chegou em 15 s'); } }, 15000);
+    function tratar(evento, mesclar) {
+      var d;
+      try { d = JSON.parse(evento.data); } catch (e) { return; }
+      if (!d) { return; }
+      if (!recebeuStream) { recebeuStream = true; clearTimeout(timer); registrar('ev', 'Receber ao vivo (EventSource)', true, 'conectado'); }
+      aplicar(d.path, d.data, mesclar);
+    }
+    fonte.addEventListener('put', function (e) { tratar(e, false); }, false);
+    fonte.addEventListener('patch', function (e) { tratar(e, true); }, false);
+    fonte.addEventListener('auth_revoked', function () { fonte.close(); }, false);
+    fonte.onerror = function () { if (!recebeuStream) { clearTimeout(timer); recebeuStream = true; registrar('ev', 'Receber ao vivo (EventSource)', false, 'erro de conexão'); } };
+  }
+
+  /* ---------- lousa ---------- */
+  var canvas = document.getElementById('lousa');
+  var ctx = canvas.getContext('2d');
+  var escala = window.devicePixelRatio || 1;
+  var larg = 0, alt = 0;
+  var cor = '#111';
+  var atual = null;
+
+  function dimensionar() {
+    larg = Math.max(200, (document.documentElement.clientWidth || window.innerWidth) - 36);
+    alt = Math.round(larg * 0.75);
+    canvas.style.width = larg + 'px'; canvas.style.height = alt + 'px';
+    canvas.width = Math.round(larg * escala); canvas.height = Math.round(alt * escala);
+    ctx.setTransform(escala, 0, 0, escala, 0, 0);
+    redesenhar();
+  }
+  function desenharTraco(t) {
+    var p = t.p;
+    if (!p || p.length < 2) { return; }
+    ctx.strokeStyle = t.c || '#111'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(p[0] * larg, p[1] * alt);
+    if (p.length === 2) { ctx.lineTo(p[0] * larg + 0.1, p[1] * alt); }
+    for (var i = 2; i < p.length; i += 2) { ctx.lineTo(p[i] * larg, p[i + 1] * alt); }
+    ctx.stroke();
+  }
+  function redesenhar() {
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, larg, alt);
+    if (imagemFundo) { ctx.drawImage(imagemFundo, 0, 0, larg, alt); }
+    var n = 0;
+    for (var k in sala.tracos) { if (sala.tracos.hasOwnProperty(k)) { desenharTraco(sala.tracos[k]); n++; } }
+    if (atual) { desenharTraco(atual); }
+    document.getElementById('contagem').innerHTML = 'Traços na sala: ' + n;
+  }
+  function carregarFundo() {
+    if (!sala.fundo) { imagemFundo = null; redesenhar(); return; }
+    var img = new Image();
+    img.onload = function () { imagemFundo = img; redesenhar(); };
+    img.src = sala.fundo;
+  }
+  function ponto(x, y) {
+    var r = canvas.getBoundingClientRect();
+    return [Math.round((x - r.left) / larg * 1000) / 1000, Math.round((y - r.top) / alt * 1000) / 1000];
+  }
+  function comecar(x, y) { var q = ponto(x, y); atual = { c: cor, p: [q[0], q[1]] }; redesenhar(); }
+  function mover(x, y) { if (!atual) { return; } var q = ponto(x, y); atual.p.push(q[0], q[1]); redesenhar(); }
+  function terminar() {
+    if (!atual) { return; }
+    var t = atual; atual = null;
+    if (!token) { alert('Ainda sem conexão com o banco.'); return; }
+    requisicao('POST', urlBanco(SALA + '/tracos'), t, function (err) { if (err) { alert('Não enviou o traço: ' + err); } });
+  }
+
+  canvas.addEventListener('touchstart', function (e) { e.preventDefault(); var t = e.changedTouches[0]; comecar(t.clientX, t.clientY); }, false);
+  canvas.addEventListener('touchmove', function (e) { e.preventDefault(); var t = e.changedTouches[0]; mover(t.clientX, t.clientY); }, false);
+  canvas.addEventListener('touchend', function (e) { e.preventDefault(); terminar(); }, false);
+  canvas.addEventListener('mousedown', function (e) { comecar(e.clientX, e.clientY); }, false);
+  canvas.addEventListener('mousemove', function (e) { mover(e.clientX, e.clientY); }, false);
+  window.addEventListener('mouseup', terminar, false);
+
+  document.getElementById('bPreto').onclick = function () { cor = '#111'; };
+  document.getElementById('bAzul').onclick = function () { cor = '#1a5fd0'; };
+  document.getElementById('bVermelho').onclick = function () { cor = '#d0261a'; };
+  document.getElementById('bLimpar').onclick = function () {
+    if (!token) { return; }
+    requisicao('DELETE', urlBanco(SALA + '/tracos'), undefined, function () {});
+    requisicao('DELETE', urlBanco(SALA + '/fundo'), undefined, function () {});
+  };
+  document.getElementById('bSalvar').onclick = function () {
+    var url = canvas.toDataURL('image/png');
+    var w = window.open('', '_blank');
+    if (w) {
+      w.document.write('<title>Anotação</title><p style="font:16px Helvetica">Toque e segure na imagem → Salvar Imagem</p><img src="' + url + '" style="max-width:100%;border:1px solid #888">');
+      w.document.close();
+    } else { alert('O Safari bloqueou a nova janela. Desative o bloqueio de pop-ups.'); }
+  };
+
+  /* foto de fundo: reduz para no máx. 1200 px e envia como JPEG */
+  document.getElementById('foto').onchange = function (e) {
+    var arq = e.target.files && e.target.files[0];
+    if (!arq || !token) { return; }
+    var leitor = new FileReader();
+    leitor.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var maior = Math.max(img.width, img.height), f = Math.min(1, 1200 / maior);
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.width * f); c.height = Math.round(img.height * f);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        var dados = c.toDataURL('image/jpeg', 0.7);
+        requisicao('PUT', urlBanco(SALA + '/fundo'), dados, function (err) {
+          if (err) { alert('Não enviou a foto: ' + err); }
+        });
+      };
+      img.src = leitor.result;
+    };
+    leitor.readAsDataURL(arq);
+  };
+
+  dimensionar();
+  passo1Login();
+})();
+</script>
+</body>
+</html>
