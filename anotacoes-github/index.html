@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html manifest="notas.appcache">
+<head>
+<meta charset="utf-8">
+<title>Anotações</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Anotações">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="notas.css">
+</head>
+<body>
+
+<!-- ============ Biblioteca de cadernos ============ -->
+<section id="biblioteca" class="tela">
+  <header class="barra">
+    <button id="b-pasta-voltar" class="botao" hidden>‹ Todas</button>
+    <h1 id="b-titulo">Anotações</h1>
+    <span class="espaco"></span>
+    <span id="offline-b" class="offline-info"></span>
+    <span id="status-b" class="status"></span>
+    <button id="b-lixeira" class="botao">Lixeira</button>
+    <button id="b-entrar" class="botao" title="Entrar no caderno de um colega com o código da sala">Entrar em sala</button>
+    <button id="b-importar" class="botao" title="PDF, slides, documentos ou imagens (iCloud Drive)">Importar</button>
+    <button id="b-novo" class="botao primario">+ Novo caderno</button>
+  </header>
+  <div id="lista" class="lista"></div>
+  <p id="vazio" class="vazio" hidden>Nenhum caderno ainda. Toque em <b>+ Novo caderno</b>.</p>
+  <input id="arquivo-imp" class="invisivel" type="file">
+</section>
+
+<!-- ============ Lixeira ============ -->
+<section id="lixeira" class="tela" hidden>
+  <header class="barra">
+    <button id="lix-voltar" class="botao">‹ Cadernos</button>
+    <h1>Lixeira</h1>
+    <span class="espaco"></span>
+    <button id="lix-esvaziar" class="botao perigo">Esvaziar</button>
+  </header>
+  <div id="lix-lista" class="lista"></div>
+  <p id="lix-vazia" class="vazio" hidden>A lixeira está vazia. O que você apagar fica aqui por 30 dias.</p>
+</section>
+
+<!-- ============ Editor ============ -->
+<section id="editor" class="tela" hidden>
+  <header class="barra ferramentas">
+    <button id="e-voltar" class="botao" title="Cadernos">‹ Cadernos</button>
+    <span class="sep"></span>
+    <button class="ferr" data-f="caneta" title="Caneta">✎<small>Caneta</small></button>
+    <button class="ferr" data-f="marca" title="Marca-texto">▬<small>Marca</small></button>
+    <button class="ferr" data-f="borracha" title="Borracha">⌫<small>Borracha</small></button>
+    <button class="ferr" data-f="texto" title="Texto">T<small>Texto</small></button>
+    <button class="ferr" data-f="imagem" title="Imagem">▣<small>Imagem</small></button>
+    <button class="ferr" data-f="selecao" title="Selecionar: toque num item ou contorne vários">⬚<small>Selecionar</small></button>
+    <span class="sep"></span>
+    <span id="cores" class="cores"></span>
+    <span id="espessuras" class="espessuras"></span>
+    <span class="sep"></span>
+    <button id="e-desfazer" class="botao icone" title="Desfazer">↶</button>
+    <button id="e-refazer" class="botao icone" title="Refazer">↷</button>
+    <button id="e-colar" class="botao" title="Colar">Colar</button>
+    <span class="espaco"></span>
+    <span id="status-e" class="status"></span>
+  </header>
+  <div id="area" class="area">
+    <canvas id="c-base"></canvas>
+    <canvas id="c-vivo"></canvas>
+    <div id="selecao" class="selecao" hidden>
+      <div id="s-acoes" class="sel-acoes">
+        <button id="s-editar" class="botao pequeno">Editar</button>
+        <button id="s-endireitar" class="botao pequeno primario">Endireitar</button>
+        <button id="s-recortar" class="botao pequeno">Recortar</button>
+        <button id="s-copiar" class="botao pequeno">Copiar</button>
+        <button id="s-apagar" class="botao pequeno perigo">Apagar</button>
+      </div>
+      <div id="s-alca" class="alca"></div>
+    </div>
+    <div id="pulso" class="pulso" hidden><div id="pulso-alca" class="pulso-alca"></div><span>Apoie a mão aqui</span></div>
+    <div id="caixa-texto" class="caixa-texto" hidden>
+      <textarea id="t-texto" placeholder="Digite aqui"></textarea>
+      <div class="t-acoes">
+        <select id="t-fonte" class="botao pequeno t-fonte" title="Fonte"></select>
+        <button id="t-menor" class="botao pequeno">A−</button>
+        <button id="t-maior" class="botao pequeno">A+</button>
+        <button id="t-ok" class="botao pequeno primario">OK</button>
+      </div>
+    </div>
+  </div>
+  <footer class="barra rodape">
+    <button id="p-ant" class="botao icone">◀</button>
+    <button id="p-num" class="botao p-num" title="Ver todas as páginas">1 / 1</button>
+    <button id="p-prox" class="botao icone">▶</button>
+    <span class="sep"></span>
+    <button id="p-nova" class="botao">+ Página</button>
+    <button id="p-fundo" class="botao">Fundo: Pautado</button>
+    <button id="p-apagar" class="botao perigo" title="Apagar página">Apagar</button>
+    <button id="p-pulso" class="botao" title="Proteção de pulso">✋ Pulso</button>
+    <span class="sep"></span>
+    <button id="e-menos" class="botao icone" title="Diminuir zoom">−</button>
+    <button id="e-mais" class="botao icone" title="Aumentar zoom">+</button>
+    <button id="e-ajustar" class="botao icone" title="Página inteira / largura da tela">⤢</button>
+    <span class="espaco"></span>
+    <span id="dica" class="dica">Segure a caneta parada: vira forma</span>
+    <button id="e-sala" class="botao pequeno sala" hidden title="Código da sala e quem está nela"></button>
+    <button id="e-importar" class="botao" title="Imagem, PDF ou slides (iCloud Drive)">Importar</button>
+    <button id="e-exportar" class="botao" title="Exportar PDF">PDF</button>
+  </footer>
+  <!-- miniaturas das páginas -->
+  <div id="miniaturas" class="miniaturas" hidden>
+    <header class="barra">
+      <h1>Páginas</h1>
+      <span class="dica">Toque para abrir · segure e arraste para mudar a ordem · ⋯ para mais</span>
+      <span class="espaco"></span>
+      <button id="m-fechar" class="botao primario">Pronto</button>
+    </header>
+    <div id="m-grade" class="lista m-grade"></div>
+  </div>
+  <input id="arquivo-img" class="invisivel" type="file" accept="image/*">
+  <input id="arquivo-imp-e" class="invisivel" type="file">
+</section>
+
+<!-- ============ Páginas para salvar (iPad antigo, sem o PC) ============ -->
+<section id="salvos" class="tela salvos" hidden>
+  <header class="barra">
+    <button id="salvos-fechar" class="botao primario">‹ Voltar</button>
+    <h1 id="salvos-titulo">Caderno</h1>
+  </header>
+  <p class="salvos-dica">Toque e segure em cada página → <b>Salvar Imagem</b>. Elas vão para o app Fotos (e para o iCloud, se as Fotos do iCloud estiverem ligadas).</p>
+  <div id="salvos-lista" class="salvos-lista"></div>
+</section>
+<!-- ============ Avisos ============ -->
+<div id="grade-cores" class="grade-cores" hidden></div>
+<div id="aviso" class="aviso" hidden></div>
+<div id="modal" class="modal" hidden><div class="modal-caixa"><p id="modal-texto"></p><div id="modal-acoes" class="modal-acoes"></div></div></div>
+
+<script src="notas-geo.js"></script>
+<script src="notas.js"></script>
+</body>
+</html>
