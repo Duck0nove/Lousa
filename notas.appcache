@@ -1,0 +1,15 @@
+CACHE MANIFEST
+# v 2b520f930854
+CACHE:
+notas.js
+notas-geo.js
+notas.css
+fontes/caveat.woff
+fontes/courier-prime.woff
+fontes/kalam.woff
+fontes/lora.woff
+fontes/patrick-hand.woff
+fontes/permanent-marker.woff
+
+NETWORK:
+*
